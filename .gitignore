@@ -1,0 +1,54 @@
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# ── Virtual Environments ─────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# ── Tooling caches ───────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.tox/
+htmlcov/
+.coverage
+coverage.xml
+
+# ── IDE / OS ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Tool outputs (kept locally, not for reviewers) ───────────
+reports/
+*.json
+*.md
+!README.md
+!iot_audit/**/*.md
+
+# ── Secrets / credentials ────────────────────────────────────
+.env
+*.pem
+*.key
+*.crt
+secrets.yml
+
+# ── Npcap / Scapy Windows specifics ──────────────────────────
+*.pcap
+*.pcapng
+
