@@ -40,6 +40,27 @@ A non-destructive, research-grade CLI tool for evaluating IoT edge device securi
 
 ---
 
+## Live Demonstration & Outputs
+
+The following terminal captures illustrate real-time execution of **IOT-Audit-CLI** evaluating an active IoT camera endpoint across both baseline and hardened security postures:
+
+### 1. Subnet Discovery & Service Fingerprinting (`scan`)
+Sweeps the target subnet using unprivileged fallback, concurrently probes standard IoT protocol suites, and outputs identified devices and active ports into a structured Rich table:
+
+![Subnet Discovery & Service Fingerprinting](assets/discovery-scan.png)
+
+### 2. OWASP Vulnerability Audit — Baseline Exposure State (`audit`)
+Evaluates the target host against OWASP IoT Top 10 vulnerabilities with exact FIRST CVSS v3.1 mathematical scoring. Demonstrates the detection of unencrypted cleartext transport (**`AUDIT-HTTP-01`**, CVSS 7.4 High) and exposed diagnostic sensor telemetry (**`AUDIT-HTTP-02`**, CVSS 6.5 Medium):
+
+![OWASP Vulnerability Audit - Baseline Exposure](assets/vulnerability-audit.png)
+
+### 3. Dual-State Hardening & Security Posture Verification
+Re-auditing following access control hardening. Telemetry endpoints (**`AUDIT-HTTP-02`**) and dictionary credential checks (**`AUDIT-HTTP-03`**) transition to **`PROTECTED`**, validating the effectiveness of applied defense-in-depth mitigations:
+
+![Post-Hardening Security Verification](assets/posture-hardened.png)
+
+---
+
 ## Installation
 
 ### Prerequisites
