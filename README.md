@@ -20,7 +20,7 @@ A non-destructive, research-grade CLI tool for evaluating IoT edge device securi
 |:---|:---|
 | **Discovery** | Layer-2 ARP sweep with OUI manufacturer lookup, UPnP/SSDP M-SEARCH, mDNS zero-config queries, with unprivileged ping fallback |
 | **Fingerprinting** | Concurrently probes standard IoT suite (MQTT, RTSP, CoAP, HTTP, Telnet) with socket banner extraction |
-| **Auditing** | 8 non-destructive OWASP-mapped vulnerability probes with exact CVSS v3.1 vector calculation |
+| **Auditing** | 9 non-destructive OWASP-mapped vulnerability probes with exact CVSS v3.1 vector calculation |
 | **Verification** | Dual-state post-hardening verification engine (validates MQTT ACLs, credentials, TLS enforcement, and RTSP auth) |
 | **Reporting** | Colorized Rich terminal tables, machine-readable JSON schemas, and academic-format Markdown reports |
 
@@ -34,7 +34,7 @@ A non-destructive, research-grade CLI tool for evaluating IoT edge device securi
 | `AUDIT-RTSP-01` | RTSP (554/8554)| Unauthenticated Video Stream | OWASP I1 · CWE-306 | **9.1 Critical** | Issues non-destructive `DESCRIBE` requests across standard camera stream URIs |
 | `AUDIT-HTTP-01` | HTTP (80/8080) | Unencrypted Cleartext Web Admin | OWASP I7 · CWE-319 | **7.4 High** | Checks if administrative console operates without HTTPS upgrade redirect |
 | `AUDIT-HTTP-02` | HTTP (80/8080) | Exposed Diagnostic Endpoints | OWASP I3 · CWE-200 | **6.5 Medium** | Safe GET requests against read-only telemetry paths (`/system/info`, `/api/device`) |
-| `AUDIT-HTTP-03` | HTTP (80/8080) | Default / Hardcoded Credentials | OWASP I1 · CWE-521 | **9.8 Critical** | Detects login forms / Basic Auth and checks CVE-documented vendor defaults |
+| `AUDIT-HTTP-03` | HTTP (80/8080) | Default / Hardcoded Credentials | OWASP I1 · CWE-521 | **9.8 Critical** | Evaluates Basic/Digest Auth challenges and login forms against vendor default dictionaries |
 | `AUDIT-COAP-01` | CoAP (5683) | Unauthenticated Resource Discovery | OWASP I2 · CWE-200 | **5.3 Medium** | Sends GET to `/.well-known/core` (RFC 6690) over UDP to evaluate resource exposure |
 | `AUDIT-TELNET-01`| Telnet (23/2323)| Insecure Legacy Remote Daemon | OWASP I5 · CWE-319 | **9.1 Critical** | Identifies active plaintext Telnet listening sockets |
 
@@ -102,25 +102,50 @@ python scripts/simulate_device.py --http-port 8080
 iot-audit audit -t 127.0.0.1 -p 8080,1883 -f table
 ```
 
-### 2. Smartphone as a Real IoT Telemetry Device
+### 2. Physical Hardware Testbed: Smartphone as an IoT Edge Camera
 
-You can turn any Android or iOS smartphone on your local Wi-Fi network into an active IoT test target:
+You can turn any standard Android or iOS smartphone into an active IoT edge camera to test HTTP and RTSP attack surfaces:
 
-1. Install an MQTT client app on your phone:
+1. **Install an IP Camera Application:**
+   - **Android:** [IP Webcam](https://play.google.com/store/apps/details?id=com.pas.webcam) (by Pavel Khlebovich)
+   - **iOS:** *IP Camera Lite* or *Live-Reporter*
+2. **Start the Camera Service:**
+   - Connect the phone and laptop to the same Wi-Fi network (or mobile hotspot).
+   - In the app, scroll to the bottom and tap **Start server** (typically serves on port `8080`).
+3. **Execute Non-Destructive Vulnerability Audit:**
+   ```bash
+   # Discover the phone on the local subnet
+   iot-audit scan -t 192.168.1.0/24 --no-arp
+
+   # Audit the phone's web management console and telemetry endpoints
+   iot-audit audit -t <PHONE_IP> -p 8080 -f table
+   ```
+4. **Empirical Ablations & State Testing:**
+   - **Baseline Exposure:** With no password set, `AUDIT-HTTP-01` flags cleartext transport (CVSS 7.4 High) and `AUDIT-HTTP-02` flags unauthenticated `/status.json` and `/sensors.json` telemetry exposure (CVSS 6.5 Medium).
+   - **Default Credentials:** Set username/password to `admin:admin` in the app. The auditor uses HTTP Digest Authentication to identify the default credential (`AUDIT-HTTP-03`, CVSS 9.8 Critical).
+   - **Hardened Defense:** Set a strong password (`Pass#9921_xK`). The auditor confirms diagnostic endpoints and login interfaces flip to **`PROTECTED`**.
+
+### 3. Smartphone as an IoT Telemetry Sensor (MQTT)
+
+You can also simulate a smart environment sensor publishing telemetry over MQTT:
+
+1. **Install an MQTT client app on your phone:**
    - **Android:** *IoT MQTT Panel* or *MQTT Dash*
    - **iOS:** *MQTTool*
-2. Start the local Mosquitto test broker on your PC:
+2. **Start the local Mosquitto test broker on your PC:**
    ```powershell
    .\scripts\setup_demo_broker.ps1 -Mode vulnerable
    ```
-3. In the mobile app, connect to your PC's Wi-Fi IP address on port `1883` without authentication, and publish sensor data to `phone/telemetry/accel`.
-4. Scan your local Wi-Fi subnet with `iot-audit`:
+3. **Connect and Publish:**
+   - Connect to your PC's IP on port `1883` without authentication.
+   - Publish sensor metrics to topic `phone/telemetry/accel`.
+4. **Scan and Audit the Broker:**
    ```bash
    iot-audit scan -t 192.168.1.0/24 --no-arp
-   iot-audit audit -t <your-pc-or-phone-ip> -p 1883 -f table
+   iot-audit audit -t <BROKER_IP> -p 1883 -f table
    ```
 
-### 3. Dual-State Evaluation (Red Team -> Blue Team Hardening)
+### 4. Dual-State Evaluation (Red Team → Blue Team Hardening)
 
 Demonstrate both initial vulnerability discovery and post-mitigation defense verification:
 
@@ -153,7 +178,7 @@ Options:
   -p, --ports TEXT      Comma-separated custom port list (e.g. 1883,554,80,5683).
   --timeout FLOAT       Socket probe timeout in seconds (default: 0.5s).
   -f, --format TEXT     Output format: [table | json | markdown] (default: table).
-  -o, --output TEXT     Output file path for generated report.
+  -o, --output TEXT     Output file path for generated report (routed to reports/ directory).
   --no-arp              Skip Layer-2 ARP sweep (no administrator privilege required).
   -u, --user TEXT       Username for authorized verification testing.
   -P, --pass TEXT       Password for authorized verification testing.
@@ -166,14 +191,26 @@ Options:
 ## Project Structure
 
 ```text
-iot-audit-cli/
-├── pyproject.toml              # Build setup & pytest/mypy configs
-├── requirements.txt            # Core dependency specifications
+IOT-Audit-CLI/
+├── pyproject.toml              # Build setup & test configuration
+├── requirements.txt            # Core runtime dependencies
 ├── README.md                   # System documentation & research showcase guide
+├── LICENSE                     # MIT License
+├── .github/
+│   └── workflows/
+│       └── ci.yml              # Multi-OS CI/CD automated test pipeline
+├── assets/                     # Live demonstration terminal captures
+│   ├── discovery-scan.png      # Subnet discovery & port fingerprinting table
+│   ├── vulnerability-audit.png # Baseline OWASP vulnerability assessment
+│   └── posture-hardened.png    # Post-mitigation security verification
 ├── demo_configs/               # Broker baseline & hardened configurations
 │   ├── mosquitto_vulnerable.conf
 │   ├── mosquitto_hardened.conf
 │   └── acl_file
+├── examples/                   # Sample generated artifacts for evaluation
+│   ├── sample_findings.json    # Machine-readable CVSS v3.1 audit output
+│   └── sample_audit_report.md  # Academic-format vulnerability audit report
+├── reports/                    # Dedicated output directory for generated reports
 ├── scripts/                    # Demonstration & testbed utilities
 │   ├── simulate_device.py      # Multi-protocol IoT edge device simulator
 │   ├── setup_demo_broker.ps1   # Windows Mosquitto launcher
@@ -190,14 +227,14 @@ iot-audit-cli/
 │   ├── modules/
 │   │   ├── mqtt_probe.py       # MQTT anonymous handshake & wildcard audit
 │   │   ├── rtsp_probe.py       # RTSP stream authentication probe
-│   │   ├── http_probe.py       # Cleartext HTTP, API exposure & default creds
+│   │   ├── http_probe.py       # Cleartext HTTP, API exposure & Digest/Basic creds
 │   │   └── coap_probe.py       # CoAP RFC 6690 unauthenticated resource audit
 │   └── utils/
 │       ├── reporter.py         # Rich table, JSON, and Markdown generation
 │       └── scoring.py          # CVSS v3.1 scoring algorithm & OWASP IoT mapping
 └── tests/
     ├── test_discovery.py       # Subnet discovery unit tests
-    ├── test_auditor.py         # Protocol probe unit tests
+    ├── test_auditor.py         # Protocol probe & Digest Auth unit tests
     ├── test_coap_probe.py      # CoAP probe unit tests
     └── test_integration.py     # End-to-end scanner pipeline integration test
 ```
@@ -206,7 +243,7 @@ iot-audit-cli/
 
 ## Running the Automated Test Suite
 
-All 41 unit and integration tests run entirely offline with mocked networking:
+All 43 unit and integration tests run entirely offline with mocked networking:
 
 ```bash
 python -m pytest tests/ -v
