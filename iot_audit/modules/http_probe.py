@@ -34,6 +34,8 @@ _DIAGNOSTIC_PATHS: list[tuple[str, str]] = [
     ("/system/info", "System info endpoint"),
     ("/api/device", "Device API endpoint"),
     ("/api/v1/device", "Device API v1"),
+    ("/status.json", "Device status JSON (IP camera / telemetry)"),
+    ("/sensors.json", "Hardware sensors telemetry"),
     ("/deviceDescription.xml", "UPnP device descriptor"),
     ("/device.xml", "Device XML descriptor"),
     ("/status", "Status page"),
