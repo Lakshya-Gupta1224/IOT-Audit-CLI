@@ -105,7 +105,13 @@ def scan(
 
     port_list_tcp = _parse_ports(ports) if ports else DEFAULT_TCP_PORTS
 
-    devices = discover(target, timeout=max(timeout, 1.0), verbose=verbose, no_arp=no_arp)
+    devices = discover(
+        target,
+        timeout=max(timeout, 1.0),
+        verbose=verbose,
+        no_arp=no_arp,
+        probe_ports=port_list_tcp,
+    )
 
     if not devices:
         console.print("[yellow]⚠  No devices discovered. Check your interface/permissions.[/yellow]")
@@ -215,7 +221,7 @@ def audit(
     port_list_tcp = _parse_ports(ports) if ports else DEFAULT_TCP_PORTS
 
     # Resolve targets — single IP or subnet
-    targets = _resolve_targets(target, timeout, verbose, no_arp=no_arp)
+    targets = _resolve_targets(target, timeout, verbose, no_arp=no_arp, probe_ports=port_list_tcp)
 
     all_findings = []
     for host in targets:
@@ -349,7 +355,13 @@ def _parse_ports(port_str: str) -> list[int]:
         raise typer.Exit(1)
 
 
-def _resolve_targets(target: str, timeout: float, verbose: bool, no_arp: bool = False) -> list[str]:
+def _resolve_targets(
+    target: str,
+    timeout: float,
+    verbose: bool,
+    no_arp: bool = False,
+    probe_ports: Optional[list[int]] = None,
+) -> list[str]:
     """Return list of host IPs to audit. Discovers subnet, returns single IP if /32."""
     import ipaddress
 
@@ -361,7 +373,13 @@ def _resolve_targets(target: str, timeout: float, verbose: bool, no_arp: bool = 
         return [str(h) for h in network.hosts()]
 
     from iot_audit.core.discovery import discover
-    devices = discover(target, timeout=max(timeout, 1.0), verbose=verbose, no_arp=no_arp)
+    devices = discover(
+        target,
+        timeout=max(timeout, 1.0),
+        verbose=verbose,
+        no_arp=no_arp,
+        probe_ports=probe_ports,
+    )
     return [d.ip for d in devices]
 
 

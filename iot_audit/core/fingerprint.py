@@ -32,7 +32,7 @@ console = Console(stderr=True)
 
 # ── Port definitions ─────────────────────────────────────────────────────────
 
-DEFAULT_TCP_PORTS: list[int] = [23, 80, 443, 554, 1883, 2323, 8080, 8443, 8554, 8883]
+DEFAULT_TCP_PORTS: list[int] = [23, 80, 443, 554, 1883, 2323, 8080, 8081, 8443, 8554, 8883]
 DEFAULT_UDP_PORTS: list[int] = [5683]
 
 # ── Data models ──────────────────────────────────────────────────────────────
@@ -85,6 +85,7 @@ _PORT_GUESS: dict[int, str] = {
     2323: "Telnet-Alt",
     5683: "CoAP",
     8080: "HTTP-Alt",
+    8081: "HTTP-Alt",
     8443: "HTTPS-Alt",
     8554: "RTSP-Alt",
     8883: "MQTTS",
@@ -112,6 +113,7 @@ def _guess_service(port: int, banner: bytes) -> str:
 _BANNER_PROBES: dict[int, bytes] = {
     80: b"HEAD / HTTP/1.0\r\n\r\n",
     8080: b"HEAD / HTTP/1.0\r\n\r\n",
+    8081: b"HEAD / HTTP/1.0\r\n\r\n",
     8443: b"HEAD / HTTP/1.0\r\n\r\n",
     554: b"OPTIONS * RTSP/1.0\r\nCSeq: 1\r\n\r\n",
     8554: b"OPTIONS * RTSP/1.0\r\nCSeq: 1\r\n\r\n",

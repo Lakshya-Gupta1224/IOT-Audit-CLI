@@ -124,10 +124,10 @@ def _arp_sweep(subnet: str, timeout: float = 3.0) -> list[DiscoveredDevice]:
     return devices
 
 
-def _ping_sweep(subnet: str) -> list[DiscoveredDevice]:
+def _ping_sweep(subnet: str, probe_ports: Optional[list[int]] = None) -> list[DiscoveredDevice]:
     """
     TCP-connect ping sweep — no raw sockets required.
-    Attempts port 80 then 443 then ICMP echo (platform-dependent).
+    Attempts common IoT ports across targets to detect active hosts.
     Returns live hosts with mac='unknown'.
     """
     network = ipaddress.ip_network(subnet, strict=False)
@@ -135,8 +135,15 @@ def _ping_sweep(subnet: str) -> list[DiscoveredDevice]:
     results: list[DiscoveredDevice] = []
     lock = threading.Lock()
 
+    # Core set of common IoT discovery ports
+    ports_to_try = [80, 443, 8080, 8081, 1883, 554, 22]
+    if probe_ports:
+        for p in probe_ports:
+            if p not in ports_to_try:
+                ports_to_try.append(p)
+
     def probe(ip: str) -> None:
-        for port in (80, 443, 22, 8080):
+        for port in ports_to_try:
             try:
                 with socket.create_connection((ip, port), timeout=0.4):
                     hostname = _reverse_dns(ip)
@@ -279,15 +286,17 @@ def discover(
     timeout: float = 3.0,
     verbose: bool = False,
     no_arp: bool = False,
+    probe_ports: Optional[list[int]] = None,
 ) -> list[DiscoveredDevice]:
     """
     Run all discovery techniques against *target* (CIDR or single IP).
 
     Args:
-        target:  e.g. "192.168.1.0/24" or "192.168.1.105"
-        timeout: per-probe socket timeout in seconds
-        verbose: print debug info to stderr
-        no_arp:  skip Layer-2 ARP sweep (no administrator/raw socket privileges needed)
+        target:      e.g. "192.168.1.0/24" or "192.168.1.105"
+        timeout:     per-probe socket timeout in seconds
+        verbose:     print debug info to stderr
+        no_arp:      skip Layer-2 ARP sweep (no administrator/raw socket privileges needed)
+        probe_ports: custom ports to check during TCP discovery sweep
 
     Returns:
         List of DiscoveredDevice objects, deduplicated by IP.
@@ -305,9 +314,11 @@ def discover(
 
     if no_arp:
         console.print("[dim]Skipping Layer-2 ARP sweep (--no-arp specified), using ping sweep…[/dim]")
-        sweep_results = _ping_sweep(target)
+        sweep_results = _ping_sweep(target, probe_ports=probe_ports)
     else:
         sweep_results = _arp_sweep(target, timeout=timeout)
+        if not sweep_results:
+            sweep_results = _ping_sweep(target, probe_ports=probe_ports)
 
     for d in sweep_results:
         devices_by_ip[d.ip] = d
