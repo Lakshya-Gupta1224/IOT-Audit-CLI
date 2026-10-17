@@ -1,9 +1,9 @@
-# IOT Audit CLI
+# IOT-Audit-CLI
 
 **Automated IoT Security Posture & Vulnerability Assessment Framework**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![CI / Test Suite](https://github.com/Lakshya-Gupta1224/IOT-Attack-Surface-Scanner/actions/workflows/ci.yml/badge.svg)](https://github.com/Lakshya-Gupta1224/IOT-Attack-Surface-Scanner/actions/workflows/ci.yml)
+[![CI / Test Suite](https://github.com/Lakshya-Gupta1224/IOT-Audit-CLI/actions/workflows/ci.yml/badge.svg)](https://github.com/Lakshya-Gupta1224/IOT-Audit-CLI/actions/workflows/ci.yml)
 [![OWASP IoT Top 10](https://img.shields.io/badge/OWASP-IoT%20Top%2010-orange)](https://owasp.org/www-project-internet-of-things/)
 [![CVSS v3.1](https://img.shields.io/badge/Scoring-CVSS%20v3.1-red)](https://www.first.org/cvss/v3.1/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -52,8 +52,8 @@ A non-destructive, research-grade CLI tool for evaluating IoT edge device securi
 
 ```bash
 # Clone the repository
-git clone https://github.com/Lakshya-Gupta1224/IOT-Attack-Surface-Scanner.git
-cd IOT-Attack-Surface-Scanner
+git clone https://github.com/Lakshya-Gupta1224/IOT-Audit-CLI.git
+cd IOT-Audit-CLI
 
 # Create and activate virtual environment
 python -m venv .venv
