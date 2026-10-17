@@ -72,7 +72,7 @@ def _rtsp_describe(
         return None
 
 
-from iot_audit.core.auditor import Finding  # noqa: E402
+from iot_audit.models import Finding  # noqa: E402
 
 
 def audit_rtsp(

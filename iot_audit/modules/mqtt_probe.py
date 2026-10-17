@@ -135,7 +135,7 @@ def _check_tls_required(host: str, port: int = 8883, timeout: float = 3.0) -> bo
 
 # ── Public probe functions ────────────────────────────────────────────────────
 
-from iot_audit.core.auditor import Finding  # noqa: E402 (avoids circular at module level)
+from iot_audit.models import Finding  # noqa: E402
 
 
 def audit_mqtt(

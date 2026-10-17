@@ -94,7 +94,7 @@ def _build_base_url(host: str, port: int) -> str:
     return f"{scheme}://{host}"
 
 
-from iot_audit.core.auditor import Finding  # noqa: E402
+from iot_audit.models import Finding  # noqa: E402
 
 
 def audit_http(

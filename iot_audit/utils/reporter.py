@@ -25,7 +25,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich import box
 
-from iot_audit.core.auditor import Finding
+from iot_audit.models import Finding
 from iot_audit.core.verify import VerifyResult
 from iot_audit.utils.scoring import severity_color, OWASP_IOT_TOP10
 

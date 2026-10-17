@@ -288,7 +288,7 @@ def report(
 
         iot-audit report -i findings.json -f table
     """
-    from iot_audit.core.auditor import Finding
+    from iot_audit.models import Finding
     from iot_audit.utils.reporter import generate_report
 
     try:
