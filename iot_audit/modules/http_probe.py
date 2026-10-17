@@ -19,9 +19,10 @@ Probes:
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 import requests
+from requests.auth import HTTPDigestAuth
 from requests.exceptions import ConnectionError, SSLError, Timeout
 
 from rich.console import Console
@@ -51,9 +52,15 @@ _DEFAULT_CREDS: list[tuple[str, str]] = [
     ("admin", ""),
     ("admin", "1234"),
     ("admin", "12345"),
+    ("admin", "password"),
+    ("admin", "pass"),
+    ("pass", "admin"),
     ("root", "root"),
     ("root", ""),
+    ("root", "admin"),
+    ("root", "pass"),
     ("user", "user"),
+    ("user", "password"),
     ("guest", "guest"),
 ]
 
@@ -71,7 +78,7 @@ def _http_get(
     timeout: float = 3.0,
     allow_redirects: bool = True,
     verify_ssl: bool = False,
-    auth: Optional[tuple[str, str]] = None,
+    auth: Optional[Any] = None,
 ) -> Optional[requests.Response]:
     """Safe GET wrapper — returns None on any connection/timeout error."""
     try:
@@ -252,12 +259,15 @@ def audit_http(
         if chk_resp is None:
             continue
 
-        # Scenario A: HTTP Basic Auth Challenge
-        if chk_resp.status_code == 401 and "basic" in chk_resp.headers.get("WWW-Authenticate", "").lower():
+        # Scenario A: HTTP 401 Unauthorized (Basic or Digest Auth Challenge)
+        www_auth = chk_resp.headers.get("WWW-Authenticate", "").lower()
+        if chk_resp.status_code == 401:
             auth_found = True
             target_auth_path = path
+            is_digest = "digest" in www_auth
             for u, p in _DEFAULT_CREDS:
-                auth_resp = _http_get(base_url + path, timeout=timeout, auth=(u, p))
+                auth_param = HTTPDigestAuth(u, p) if is_digest else (u, p)
+                auth_resp = _http_get(base_url + path, timeout=timeout, auth=auth_param)
                 if auth_resp is not None and auth_resp.status_code == 200:
                     valid_cred = (u, p)
                     break

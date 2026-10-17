@@ -267,6 +267,37 @@ class TestHttpProbe(unittest.TestCase):
         self.assertEqual(http03.verdict, "VULNERABLE")
         self.assertIn("admin:admin", http03.evidence)
 
+    @patch("iot_audit.modules.http_probe._http_get")
+    def test_default_credentials_digest_auth_vulnerable(self, mock_get):
+        """HTTP Digest Auth challenge (common in IP Webcam) accepts admin/admin -> AUDIT-HTTP-03 VULNERABLE."""
+        from requests.auth import HTTPDigestAuth
+        from iot_audit.modules.http_probe import audit_http
+
+        def get_side_effect(url, auth=None, **kwargs):
+            resp = MagicMock()
+            if isinstance(auth, HTTPDigestAuth) and auth.username == "admin" and auth.password == "admin":
+                resp.status_code = 200
+                resp.headers = {}
+                resp.text = "IP Webcam stream OK"
+            elif url.endswith("/"):
+                resp.status_code = 401
+                resp.headers = {"WWW-Authenticate": 'Digest realm="IP Webcam", nonce="12345"'}
+                resp.text = "Unauthorized"
+            else:
+                resp.status_code = 404
+                resp.headers = {}
+                resp.text = ""
+            return resp
+
+        mock_get.side_effect = get_side_effect
+
+        findings = audit_http("192.168.1.107", port=8080)
+        http03 = next(f for f in findings if f.audit_id == "AUDIT-HTTP-03")
+        self.assertEqual(http03.verdict, "VULNERABLE")
+        self.assertEqual(http03.severity, "CRITICAL")
+        self.assertEqual(http03.cvss_score, 9.8)
+        self.assertIn("admin:admin", http03.evidence)
+
 
 # ── Finding model tests ────────────────────────────────────────────────────────
 
