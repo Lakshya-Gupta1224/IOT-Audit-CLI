@@ -309,5 +309,8 @@ def _write(path: str, content: str) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(content, encoding="utf-8")
-    console.print(f"[green]✔ Report written to:[/green] {p.resolve()}")
+    try:
+        console.print(f"[green][+] Report written to:[/green] {p.resolve()}")
+    except UnicodeEncodeError:
+        print(f"[+] Report written to: {p.resolve()}")
 

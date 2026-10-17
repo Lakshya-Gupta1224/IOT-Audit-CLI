@@ -1,0 +1,142 @@
+{
+  "scan_metadata": {
+    "tool": "iot-audit-cli",
+    "version": "0.1.0",
+    "target": "192.168.1.0/24",
+    "timestamp": "2026-10-29T08:15:22.418290+00:00",
+    "total_probes": 7,
+    "vulnerable_count": 5,
+    "max_cvss_score": 9.8
+  },
+  "findings": [
+    {
+      "audit_id": "AUDIT-MQTT-01",
+      "host": "192.168.1.105",
+      "port": 1883,
+      "protocol": "MQTT",
+      "verdict": "VULNERABLE",
+      "title": "MQTT Broker Anonymous Authentication Bypass",
+      "evidence": "CONNACK return code 0x00 (Connection Accepted) — anonymous access granted.",
+      "owasp_category": "I1 – Weak, Guessable, or Hardcoded Passwords",
+      "cwe": "CWE-306",
+      "cvss_score": 9.8,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "severity": "CRITICAL",
+      "remediation": "In mosquitto.conf:\n  allow_anonymous false\n  password_file /etc/mosquitto/passwd\nThen run: mosquitto_passwd -c /etc/mosquitto/passwd <username>"
+    },
+    {
+      "audit_id": "AUDIT-MQTT-02",
+      "host": "192.168.1.105",
+      "port": 1883,
+      "protocol": "MQTT",
+      "verdict": "VULNERABLE",
+      "title": "MQTT Wildcard Topic Namespace Exposure",
+      "evidence": "Wildcard '#' subscription succeeded. Topics exposed: telemetry/temp, sensors/node1/accel, status/health",
+      "owasp_category": "I2 – Insecure Network Services",
+      "cwe": "CWE-200",
+      "cvss_score": 7.5,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "severity": "HIGH",
+      "remediation": "Implement MQTT ACLs in mosquitto.conf:\n  acl_file /etc/mosquitto/acl\nACL file example:\n  user sensor_node\n  topic readwrite sensors/#\n  topic deny #"
+    },
+    {
+      "audit_id": "AUDIT-HTTP-01",
+      "host": "192.168.1.112",
+      "port": 8080,
+      "protocol": "HTTP",
+      "verdict": "VULNERABLE",
+      "title": "Unencrypted Cleartext HTTP Admin Interface",
+      "evidence": "HTTP 200 — web interface accessible over plaintext HTTP (no TLS redirect).",
+      "owasp_category": "I7 – Insecure Data Transfer and Storage",
+      "cwe": "CWE-319",
+      "cvss_score": 7.4,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N",
+      "severity": "HIGH",
+      "remediation": "1. Enable HTTPS on the device web server.\n2. Add HTTP -> HTTPS redirect (301) for all admin paths.\n3. Enforce Strict-Transport-Security (HSTS) headers."
+    },
+    {
+      "audit_id": "AUDIT-HTTP-02",
+      "host": "192.168.1.112",
+      "port": 8080,
+      "protocol": "HTTP",
+      "verdict": "VULNERABLE",
+      "title": "Exposed Diagnostic / Telemetry Endpoints Without Authentication",
+      "evidence": "2 endpoint(s) returned HTTP 200 without authentication: /system/info, /api/device",
+      "owasp_category": "I3 – Insecure Ecosystem Interfaces",
+      "cwe": "CWE-200",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "severity": "MEDIUM",
+      "remediation": "1. Require Bearer token / Basic Auth over HTTPS on all API paths.\n2. Disable diagnostic endpoints in production firmware."
+    },
+    {
+      "audit_id": "AUDIT-HTTP-03",
+      "host": "192.168.1.112",
+      "port": 8080,
+      "protocol": "HTTP",
+      "verdict": "VULNERABLE",
+      "title": "Default or Hardcoded Web Interface Credentials",
+      "evidence": "Default credentials accepted on /login: 'admin:admin'",
+      "owasp_category": "I1 – Weak, Guessable, or Hardcoded Passwords",
+      "cwe": "CWE-521",
+      "cvss_score": 9.8,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "severity": "CRITICAL",
+      "remediation": "1. Force administrator password rotation on initial boot.\n2. Enforce minimum complexity requirements and rate limit login endpoints."
+    },
+    {
+      "audit_id": "AUDIT-COAP-01",
+      "host": "192.168.1.130",
+      "port": 5683,
+      "protocol": "CoAP",
+      "verdict": "PROTECTED",
+      "title": "Unauthenticated CoAP Resource Discovery (.well-known/core)",
+      "evidence": "CoAP response code 4.01 — Access denied / authentication enforced.",
+      "owasp_category": "I2 – Insecure Network Services",
+      "cwe": "CWE-200",
+      "cvss_score": 0.0,
+      "cvss_vector": "",
+      "severity": "INFO",
+      "remediation": "Maintain DTLS Pre-Shared Key (PSK) requirement for all CoAP queries."
+    },
+    {
+      "audit_id": "AUDIT-RTSP-01",
+      "host": "192.168.1.140",
+      "port": 554,
+      "protocol": "RTSP",
+      "verdict": "PROTECTED",
+      "title": "Unauthenticated RTSP Video Stream Access",
+      "evidence": "RTSP DESCRIBE returned 401/403 on all probed paths — authentication enforced.",
+      "owasp_category": "I1 – Weak, Guessable, or Hardcoded Passwords",
+      "cwe": "CWE-306",
+      "cvss_score": 0.0,
+      "cvss_vector": "",
+      "severity": "INFO",
+      "remediation": "Digest authentication verified."
+    }
+  ],
+  "verification_results": [
+    {
+      "check_id": "VERIFY-MQTT-AUTH-ANON",
+      "description": "MQTT Anonymous Access Blocked",
+      "target": "192.168.1.105",
+      "port": 1883,
+      "status": "PASS",
+      "detail": "CONNACK 0x05 — anonymous connections rejected. ✓"
+    },
+    {
+      "check_id": "VERIFY-MQTT-ACL",
+      "description": "MQTT ACL Blocks '$SYS/#'",
+      "target": "192.168.1.105",
+      "port": 1883,
+      "status": "PASS",
+      "detail": "ACL enforced — no messages received on restricted topic '$SYS/#'. ✓"
+    }
+  ],
+  "owasp_coverage": {
+    "I1": ["AUDIT-MQTT-01", "AUDIT-HTTP-03", "AUDIT-RTSP-01"],
+    "I2": ["AUDIT-MQTT-02", "AUDIT-COAP-01"],
+    "I3": ["AUDIT-HTTP-02"],
+    "I7": ["AUDIT-HTTP-01"]
+  }
+}

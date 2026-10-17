@@ -40,6 +40,7 @@ reports/
 *.md
 !README.md
 !iot_audit/**/*.md
+!examples/**
 
 # ── Secrets / credentials ────────────────────────────────────
 .env

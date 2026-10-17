@@ -49,39 +49,42 @@ def run_audit(
     console.print(f"\n[bold magenta]🔬 Starting vulnerability audit on {host}[/bold magenta]")
 
     # ── MQTT ──────────────────────────────────────────────────────────────────
-    if smap.has_port(1883):
-        console.print("  [yellow]→ MQTT:1883 detected — running MQTT probes…[/yellow]")
-        mqtt_findings = audit_mqtt(host, port=1883, tls=False, timeout=timeout, verbose=verbose)
+    mqtt_ports = [s.port for s in smap.open_services if s.port == 1883 or s.service_guess == "MQTT"]
+    for p in set(mqtt_ports):
+        console.print(f"  [yellow]→ MQTT:{p} detected — running MQTT probes…[/yellow]")
+        mqtt_findings = audit_mqtt(host, port=p, tls=False, timeout=timeout, verbose=verbose)
         findings.extend(mqtt_findings)
 
-    if smap.has_port(8883):
-        console.print("  [yellow]→ MQTTS:8883 detected — running TLS MQTT probes…[/yellow]")
-        mqtt_findings = audit_mqtt(host, port=8883, tls=True, timeout=timeout, verbose=verbose)
+    mqtts_ports = [s.port for s in smap.open_services if s.port == 8883 or s.service_guess == "MQTTS"]
+    for p in set(mqtts_ports):
+        console.print(f"  [yellow]→ MQTTS:{p} detected — running TLS MQTT probes…[/yellow]")
+        mqtt_findings = audit_mqtt(host, port=p, tls=True, timeout=timeout, verbose=verbose)
         findings.extend(mqtt_findings)
 
     # ── RTSP ──────────────────────────────────────────────────────────────────
-    for rtsp_port in (554, 8554):
-        if smap.has_port(rtsp_port):
-            console.print(f"  [yellow]→ RTSP:{rtsp_port} detected — running RTSP probe…[/yellow]")
-            rtsp_findings = audit_rtsp(host, port=rtsp_port, timeout=timeout, verbose=verbose)
-            findings.extend(rtsp_findings)
+    rtsp_ports = [s.port for s in smap.open_services if s.port in (554, 8554) or "RTSP" in s.service_guess]
+    for p in set(rtsp_ports):
+        console.print(f"  [yellow]→ RTSP:{p} detected — running RTSP probe…[/yellow]")
+        rtsp_findings = audit_rtsp(host, port=p, timeout=timeout, verbose=verbose)
+        findings.extend(rtsp_findings)
 
     # ── HTTP ──────────────────────────────────────────────────────────────────
-    for http_port in (80, 8080, 8443):
-        if smap.has_port(http_port):
-            console.print(f"  [yellow]→ HTTP:{http_port} detected — running HTTP probes…[/yellow]")
-            http_findings = audit_http(host, port=http_port, timeout=timeout, verbose=verbose)
-            findings.extend(http_findings)
+    http_ports = [s.port for s in smap.open_services if s.port in (80, 8080, 8443) or "HTTP" in s.service_guess]
+    for p in set(http_ports):
+        console.print(f"  [yellow]→ HTTP:{p} detected — running HTTP probes…[/yellow]")
+        http_findings = audit_http(host, port=p, timeout=timeout, verbose=verbose)
+        findings.extend(http_findings)
 
     # ── CoAP ──────────────────────────────────────────────────────────────────
-    if smap.has_port(5683):
-        console.print("  [yellow]→ CoAP:5683 detected — running CoAP probes…[/yellow]")
-        coap_findings = audit_coap(host, port=5683, timeout=timeout, verbose=verbose)
+    coap_ports = [s.port for s in smap.open_services if s.port == 5683 or s.service_guess == "CoAP"]
+    for p in set(coap_ports):
+        console.print(f"  [yellow]→ CoAP:{p} detected — running CoAP probes…[/yellow]")
+        coap_findings = audit_coap(host, port=p, timeout=timeout, verbose=verbose)
         findings.extend(coap_findings)
 
     # ── Telnet ────────────────────────────────────────────────────────────────
-    for telnet_port in (23, 2323):
-        if smap.has_port(telnet_port):
+    telnet_ports = [s.port for s in smap.open_services if s.port in (23, 2323) or "Telnet" in s.service_guess]
+    for telnet_port in set(telnet_ports):
             findings.append(
                 Finding(
                     audit_id="AUDIT-TELNET-01",
