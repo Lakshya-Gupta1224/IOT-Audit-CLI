@@ -1,5 +1,3 @@
-# iot-audit-cli
-
 **Automated IoT Security Posture & Vulnerability Assessment Framework**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
