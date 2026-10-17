@@ -15,6 +15,7 @@ from rich.console import Console
 
 from iot_audit.core.fingerprint import ServiceMap
 from iot_audit.models import Finding
+from iot_audit.modules.coap_probe import audit_coap
 from iot_audit.modules.http_probe import audit_http
 from iot_audit.modules.mqtt_probe import audit_mqtt
 from iot_audit.modules.rtsp_probe import audit_rtsp
@@ -71,6 +72,12 @@ def run_audit(
             console.print(f"  [yellow]→ HTTP:{http_port} detected — running HTTP probes…[/yellow]")
             http_findings = audit_http(host, port=http_port, timeout=timeout, verbose=verbose)
             findings.extend(http_findings)
+
+    # ── CoAP ──────────────────────────────────────────────────────────────────
+    if smap.has_port(5683):
+        console.print("  [yellow]→ CoAP:5683 detected — running CoAP probes…[/yellow]")
+        coap_findings = audit_coap(host, port=5683, timeout=timeout, verbose=verbose)
+        findings.extend(coap_findings)
 
     # ── Telnet ────────────────────────────────────────────────────────────────
     for telnet_port in (23, 2323):

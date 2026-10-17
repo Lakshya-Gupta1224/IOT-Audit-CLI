@@ -19,9 +19,7 @@ Probes:
 
 from __future__ import annotations
 
-import socket
 from typing import Optional
-from urllib.parse import urljoin
 
 import requests
 from requests.exceptions import ConnectionError, SSLError, Timeout
@@ -73,11 +71,33 @@ def _http_get(
     timeout: float = 3.0,
     allow_redirects: bool = True,
     verify_ssl: bool = False,
+    auth: Optional[tuple[str, str]] = None,
 ) -> Optional[requests.Response]:
     """Safe GET wrapper — returns None on any connection/timeout error."""
     try:
         return _SESSION.get(
             url,
+            timeout=timeout,
+            allow_redirects=allow_redirects,
+            verify=verify_ssl,
+            auth=auth,
+        )
+    except (ConnectionError, Timeout, SSLError, requests.exceptions.RequestException):
+        return None
+
+
+def _http_post(
+    url: str,
+    data: dict,
+    timeout: float = 3.0,
+    allow_redirects: bool = False,
+    verify_ssl: bool = False,
+) -> Optional[requests.Response]:
+    """Safe POST wrapper — returns None on any connection/timeout error."""
+    try:
+        return _SESSION.post(
+            url,
+            data=data,
             timeout=timeout,
             allow_redirects=allow_redirects,
             verify=verify_ssl,
@@ -215,6 +235,92 @@ def audit_http(
                 "2. Disable or remove diagnostic endpoints in production firmware.\n"
                 "3. Use firewall rules to restrict /api, /status, /metrics to trusted subnets.\n"
                 "4. Apply content-type and CORS restrictions on API responses."
+            ),
+        )
+    )
+
+    # ── AUDIT-HTTP-03: Default credential check ──────────────────────────────
+    console.print(f"    [dim]AUDIT-HTTP-03: Checking for default credentials on {base_url}…[/dim]")
+    auth_found = False
+    valid_cred = None
+    target_auth_path = None
+
+    # Check root and common login paths for 401 Basic Auth or password forms
+    candidate_paths = ["/", "/login", "/admin"]
+    for path in candidate_paths:
+        chk_resp = _http_get(base_url + path, timeout=timeout)
+        if chk_resp is None:
+            continue
+
+        # Scenario A: HTTP Basic Auth Challenge
+        if chk_resp.status_code == 401 and "basic" in chk_resp.headers.get("WWW-Authenticate", "").lower():
+            auth_found = True
+            target_auth_path = path
+            for u, p in _DEFAULT_CREDS:
+                auth_resp = _http_get(base_url + path, timeout=timeout, auth=(u, p))
+                if auth_resp is not None and auth_resp.status_code == 200:
+                    valid_cred = (u, p)
+                    break
+            if valid_cred:
+                break
+
+        # Scenario B: Form with password input
+        elif chk_resp.status_code == 200 and 'type="password"' in chk_resp.text.lower():
+            auth_found = True
+            target_auth_path = path
+            for u, p in _DEFAULT_CREDS:
+                post_data = {"username": u, "user": u, "password": p, "pass": p, "submit": "Login"}
+                post_resp = _http_post(base_url + path, data=post_data, timeout=timeout)
+                if post_resp is not None:
+                    # Successful login usually results in 302 redirect or 200 without the password form
+                    if post_resp.status_code in (301, 302, 303, 307):
+                        valid_cred = (u, p)
+                        break
+                    elif post_resp.status_code == 200 and 'type="password"' not in post_resp.text.lower() and "invalid" not in post_resp.text.lower():
+                        valid_cred = (u, p)
+                        break
+            if valid_cred:
+                break
+
+    if valid_cred:
+        verdict_03 = "VULNERABLE"
+        u, p = valid_cred
+        cred_display = f"{u}:{p}" if p else f"{u}:<blank>"
+        evidence_03 = f"Default credentials accepted on {target_auth_path}: '{cred_display}'"
+        severity_03 = "CRITICAL"
+        score_03 = 9.8
+    elif auth_found:
+        verdict_03 = "PROTECTED"
+        evidence_03 = "Authentication required and tested default vendor credentials were all rejected."
+        severity_03 = "INFO"
+        score_03 = 0.0
+    else:
+        verdict_03 = "UNKNOWN"
+        evidence_03 = "No HTTP Basic Authentication or web login form detected on common paths."
+        severity_03 = "INFO"
+        score_03 = 0.0
+
+    if verbose:
+        console.print(f"      HTTP-03 Result: {verdict_03} — {evidence_03}")
+
+    findings.append(
+        Finding(
+            audit_id="AUDIT-HTTP-03",
+            host=host,
+            port=port,
+            protocol="HTTP",
+            verdict=verdict_03,
+            title="Default or Hardcoded Web Interface Credentials",
+            evidence=evidence_03,
+            owasp="I1 – Weak, Guessable, or Hardcoded Passwords",
+            cwe="CWE-521",
+            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            cvss_score=score_03,
+            severity=severity_03,
+            remediation=(
+                "1. Change default administrator passwords upon first deployment.\n"
+                "2. Enforce strong password complexity requirements (minimum 12 characters, mixed case, symbols).\n"
+                "3. Implement account lockout or progressive rate limiting after consecutive failed login attempts."
             ),
         )
     )

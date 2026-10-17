@@ -68,6 +68,7 @@ _opt_format = typer.Option("table", "--format", "-f", help="Output format: table
 _opt_username = typer.Option("", "--user", "-u", help="Username for verification testing.")
 _opt_password = typer.Option("", "--pass", "-P", help="Password for verification testing.")
 _opt_verbose = typer.Option(False, "--verbose", "-v", help="Enable verbose debug output.")
+_opt_no_arp = typer.Option(False, "--no-arp", help="Skip Layer-2 ARP sweep (no administrator privilege required).")
 
 
 # ── scan command ──────────────────────────────────────────────────────────────
@@ -81,6 +82,7 @@ def scan(
     format: str = _opt_format,
     output: Optional[str] = _opt_output,
     verbose: bool = _opt_verbose,
+    no_arp: bool = _opt_no_arp,
 ) -> None:
     """
     [bold]Discover IoT devices[/bold] on a subnet via ARP sweep, UPnP/SSDP, and mDNS.
@@ -103,7 +105,7 @@ def scan(
 
     port_list_tcp = _parse_ports(ports) if ports else DEFAULT_TCP_PORTS
 
-    devices = discover(target, timeout=max(timeout, 1.0), verbose=verbose)
+    devices = discover(target, timeout=max(timeout, 1.0), verbose=verbose, no_arp=no_arp)
 
     if not devices:
         console.print("[yellow]⚠  No devices discovered. Check your interface/permissions.[/yellow]")
@@ -183,6 +185,7 @@ def audit(
     format: str = _opt_format,
     output: Optional[str] = _opt_output,
     verbose: bool = _opt_verbose,
+    no_arp: bool = _opt_no_arp,
 ) -> None:
     """
     [bold]Run a full vulnerability audit[/bold] against a target IP or subnet.
@@ -208,7 +211,7 @@ def audit(
     port_list_tcp = _parse_ports(ports) if ports else DEFAULT_TCP_PORTS
 
     # Resolve targets — single IP or subnet
-    targets = _resolve_targets(target, timeout, verbose)
+    targets = _resolve_targets(target, timeout, verbose, no_arp=no_arp)
 
     all_findings = []
     for host in targets:
@@ -342,7 +345,7 @@ def _parse_ports(port_str: str) -> list[int]:
         raise typer.Exit(1)
 
 
-def _resolve_targets(target: str, timeout: float, verbose: bool) -> list[str]:
+def _resolve_targets(target: str, timeout: float, verbose: bool, no_arp: bool = False) -> list[str]:
     """Return list of host IPs to audit. Discovers subnet, returns single IP if /32."""
     import ipaddress
 
@@ -354,7 +357,7 @@ def _resolve_targets(target: str, timeout: float, verbose: bool) -> list[str]:
         return [str(h) for h in network.hosts()]
 
     from iot_audit.core.discovery import discover
-    devices = discover(target, timeout=max(timeout, 1.0), verbose=verbose)
+    devices = discover(target, timeout=max(timeout, 1.0), verbose=verbose, no_arp=no_arp)
     return [d.ip for d in devices]
 
 

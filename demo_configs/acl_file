@@ -1,0 +1,13 @@
+# Access Control List (ACL) Configuration for Mosquitto Hardening
+# Defensive Posture Verification Demo
+
+# Deny system tree exploration
+topic deny $SYS/#
+
+# User 'admin' access policy
+user admin
+topic readwrite sensors/#
+topic read telemetry/#
+
+# Default rule: Deny wildcard `#` subscription for unauthorized paths
+topic deny #

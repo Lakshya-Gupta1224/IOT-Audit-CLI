@@ -278,6 +278,7 @@ def discover(
     target: str,
     timeout: float = 3.0,
     verbose: bool = False,
+    no_arp: bool = False,
 ) -> list[DiscoveredDevice]:
     """
     Run all discovery techniques against *target* (CIDR or single IP).
@@ -286,6 +287,7 @@ def discover(
         target:  e.g. "192.168.1.0/24" or "192.168.1.105"
         timeout: per-probe socket timeout in seconds
         verbose: print debug info to stderr
+        no_arp:  skip Layer-2 ARP sweep (no administrator/raw socket privileges needed)
 
     Returns:
         List of DiscoveredDevice objects, deduplicated by IP.
@@ -301,11 +303,16 @@ def discover(
     # --- ARP / ping sweep ---
     devices_by_ip: dict[str, DiscoveredDevice] = {}
 
-    arp_results = _arp_sweep(target, timeout=timeout)
-    for d in arp_results:
+    if no_arp:
+        console.print("[dim]Skipping Layer-2 ARP sweep (--no-arp specified), using ping sweep…[/dim]")
+        sweep_results = _ping_sweep(target)
+    else:
+        sweep_results = _arp_sweep(target, timeout=timeout)
+
+    for d in sweep_results:
         devices_by_ip[d.ip] = d
         if verbose:
-            console.print(f"  [green]ARP[/green] {d}")
+            console.print(f"  [green]{'PING' if no_arp else 'ARP'}[/green] {d}")
 
     # --- SSDP (skip for single /32 to avoid noise unless single) ---
     console.print("[cyan]📡 Running UPnP/SSDP multicast probe…[/cyan]")

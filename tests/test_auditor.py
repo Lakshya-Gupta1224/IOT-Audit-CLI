@@ -208,13 +208,72 @@ class TestHttpProbe(unittest.TestCase):
         http02 = next(f for f in findings if f.audit_id == "AUDIT-HTTP-02")
         self.assertEqual(http02.verdict, "VULNERABLE")
 
+    @patch("iot_audit.modules.http_probe._http_post")
+    @patch("iot_audit.modules.http_probe._http_get")
+    def test_default_credentials_form_vulnerable(self, mock_get, mock_post):
+        """Web login form accepts default admin/admin credentials -> AUDIT-HTTP-03 VULNERABLE."""
+        from iot_audit.modules.http_probe import audit_http
+
+        def get_side_effect(url, **kwargs):
+            resp = MagicMock()
+            if url.endswith("/login"):
+                resp.status_code = 200
+                resp.headers = {}
+                resp.text = '<form method="post"><input name="user"><input type="password"></form>'
+            else:
+                resp.status_code = 404
+                resp.headers = {}
+                resp.text = ""
+            return resp
+
+        mock_get.side_effect = get_side_effect
+
+        post_resp = MagicMock()
+        post_resp.status_code = 302
+        post_resp.headers = {"Location": "/dashboard"}
+        mock_post.return_value = post_resp
+
+        findings = audit_http("192.168.1.107", port=80)
+        http03 = next(f for f in findings if f.audit_id == "AUDIT-HTTP-03")
+        self.assertEqual(http03.verdict, "VULNERABLE")
+        self.assertEqual(http03.severity, "CRITICAL")
+        self.assertEqual(http03.cvss_score, 9.8)
+
+    @patch("iot_audit.modules.http_probe._http_get")
+    def test_default_credentials_basic_auth_vulnerable(self, mock_get):
+        """HTTP Basic Auth challenge accepts admin/admin -> AUDIT-HTTP-03 VULNERABLE."""
+        from iot_audit.modules.http_probe import audit_http
+
+        def get_side_effect(url, auth=None, **kwargs):
+            resp = MagicMock()
+            if auth == ("admin", "admin"):
+                resp.status_code = 200
+                resp.headers = {}
+                resp.text = "Welcome admin"
+            elif url.endswith("/admin"):
+                resp.status_code = 401
+                resp.headers = {"WWW-Authenticate": 'Basic realm="IoT Admin"'}
+                resp.text = "Unauthorized"
+            else:
+                resp.status_code = 404
+                resp.headers = {}
+                resp.text = ""
+            return resp
+
+        mock_get.side_effect = get_side_effect
+
+        findings = audit_http("192.168.1.107", port=80)
+        http03 = next(f for f in findings if f.audit_id == "AUDIT-HTTP-03")
+        self.assertEqual(http03.verdict, "VULNERABLE")
+        self.assertIn("admin:admin", http03.evidence)
+
 
 # ── Finding model tests ────────────────────────────────────────────────────────
 
 
 class TestFindingModel(unittest.TestCase):
     def test_to_dict_has_all_keys(self):
-        from iot_audit.core.auditor import Finding
+        from iot_audit.models import Finding
 
         f = Finding(
             audit_id="AUDIT-TEST-01",
@@ -231,7 +290,7 @@ class TestFindingModel(unittest.TestCase):
             self.assertIn(key, d)
 
     def test_finding_defaults(self):
-        from iot_audit.core.auditor import Finding
+        from iot_audit.models import Finding
 
         f = Finding(
             audit_id="X", host="h", port=0, protocol="P",
