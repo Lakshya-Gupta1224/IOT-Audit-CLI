@@ -153,7 +153,9 @@ def scan(
 
     console.print(table)
 
-    if format == "json" and output:
+    if format == "json":
+        from iot_audit.utils.reporter import resolve_report_path
+        target_path = resolve_report_path(output, "devices.json")
         data = {
             "scan_target": target,
             "devices": [
@@ -170,8 +172,10 @@ def scan(
                 for d in devices
             ],
         }
-        Path(output).write_text(json.dumps(data, indent=2), encoding="utf-8")
-        console.print(f"[green]✔ Scan results saved to {output}[/green]")
+        p = Path(target_path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        console.print(f"[green][+] Scan results saved to {p.resolve()}[/green]")
 
 
 # ── audit command ─────────────────────────────────────────────────────────────

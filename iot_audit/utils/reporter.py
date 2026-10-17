@@ -262,6 +262,25 @@ def _to_markdown(
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+REPORTS_DIR = Path("reports")
+
+
+def resolve_report_path(output_path: Optional[str], default_filename: str) -> str:
+    """
+    Resolve the report file path. If no path is provided or a bare filename
+    without directory components is given, route it into the dedicated 'reports/' folder.
+    If an explicit directory path or absolute path is given, respect it.
+    """
+    if not output_path:
+        return str(REPORTS_DIR / default_filename)
+
+    p = Path(output_path)
+    # If the user only gave a filename like "phone_report.md" or "findings.json"
+    if p.parent == Path(".") or p.parent == Path(""):
+        return str(REPORTS_DIR / p.name)
+
+    return str(p)
+
 
 def generate_report(
     findings: list[Finding],
@@ -277,7 +296,7 @@ def generate_report(
         findings:      List of Finding objects from auditor
         target:        Target subnet or host string
         fmt:           "table" | "json" | "markdown"
-        output_path:   File path to write (required for json/markdown)
+        output_path:   File path to write (defaults into 'reports/' directory)
         verify_results: Optional verification results to include
 
     Returns:
@@ -292,13 +311,15 @@ def generate_report(
     elif fmt == "json":
         data = _to_json(findings, verify_results, target)
         content = json.dumps(data, indent=2)
-        _write(output_path or "findings.json", content)
-        return output_path
+        target_file = resolve_report_path(output_path, "findings.json")
+        _write(target_file, content)
+        return target_file
 
     elif fmt == "markdown":
         content = _to_markdown(findings, verify_results, target)
-        _write(output_path or "audit_report.md", content)
-        return output_path
+        target_file = resolve_report_path(output_path, "audit_report.md")
+        _write(target_file, content)
+        return target_file
 
     else:
         raise ValueError(f"Unknown format: {fmt!r}. Choose from: table, json, markdown")

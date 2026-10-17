@@ -96,6 +96,22 @@ class TestPipelineIntegration(unittest.TestCase):
         anon_result = next(r for r in results if r.check_id == "VERIFY-MQTT-AUTH-ANON")
         self.assertEqual(anon_result.status, "PASS")
 
+    def test_report_path_routing_to_dedicated_folder(self):
+        """Ensure report paths default to the dedicated 'reports/' directory."""
+        from iot_audit.utils.reporter import resolve_report_path, REPORTS_DIR
+
+        # Case 1: None provided -> default inside reports/
+        p1 = resolve_report_path(None, "audit_report.md")
+        self.assertEqual(p1, str(REPORTS_DIR / "audit_report.md"))
+
+        # Case 2: Bare filename provided -> routes inside reports/
+        p2 = resolve_report_path("custom_report.json", "fallback.json")
+        self.assertEqual(p2, str(REPORTS_DIR / "custom_report.json"))
+
+        # Case 3: Explicit directory provided -> preserved as-is
+        p3 = resolve_report_path(str(Path("custom_folder") / "report.md"), "fallback.md")
+        self.assertEqual(p3, str(Path("custom_folder") / "report.md"))
+
 
 if __name__ == "__main__":
     unittest.main()
